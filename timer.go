@@ -6,6 +6,7 @@ import (
 	"github.com/smartystreets/clock"
 )
 
+
 type Timer struct {
 	clock   *clock.Clock
 	sleeper *clock.Sleeper
