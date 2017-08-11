@@ -11,12 +11,10 @@ type System interface {
 	Notify(message string)
 	FocusApp(name string)
 	LockScreen()
+	Sleep(time.Duration)
 }
 
-type Sleeper func(time.Duration)
-
 type Controller struct {
-	sleep    Sleeper
 	terminal io.Reader
 	system   System
 
@@ -29,12 +27,11 @@ type Controller struct {
 	longBreak  time.Duration
 }
 
-func NewController(terminal io.Reader, system System, sessions int, scale time.Duration, sleeper Sleeper) *Controller {
+func NewController(terminal io.Reader, system System, sessions int, scale time.Duration) *Controller {
 	return &Controller{
 		terminal:       terminal,
 		system:         system,
 		maxTomatoCount: sessions,
-		sleep:          sleeper,
 
 		tomato:     scale * 24,
 		coolDown:   scale,
@@ -53,14 +50,14 @@ func (this *Controller) Run() {
 
 func (this *Controller) doTomato() {
 	log.Printf("--- Tomato #%d: %v ---", this.tomatoCount, this.tomato+this.coolDown)
-	this.sleep(this.tomato)
+	this.system.Sleep(this.tomato)
 	this.doCoolDown()
 }
 func (this *Controller) doCoolDown() {
 	soon := fmt.Sprintf("%s remaining until %s break...", this.coolDown, this.breakDuration())
 	log.Println(soon)
 	this.system.Notify(soon)
-	this.sleep(this.coolDown)
+	this.system.Sleep(this.coolDown)
 }
 
 func (this *Controller) breakDuration() time.Duration {
@@ -76,7 +73,7 @@ func (this *Controller) takeBrake() {
 	this.system.FocusApp("Terminal")
 	log.Printf("Break: %v", duration)
 	this.system.LockScreen()
-	this.sleep(duration)
+	this.system.Sleep(duration)
 }
 
 func (this *Controller) prepareNextTomato() {

@@ -4,9 +4,16 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"time"
 )
 
-type MacOS struct{}
+type GenericOS struct{}
+
+func (this *GenericOS) Sleep(duration time.Duration) {
+	time.Sleep(duration)
+}
+
+type MacOS struct{ *GenericOS }
 
 func (this *MacOS) Notify(message string) {
 	notification := fmt.Sprintf("display notification \"%s\" with title \"tomato Timer\"", message)

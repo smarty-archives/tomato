@@ -9,6 +9,8 @@ import (
 	"github.com/smartystreets/tomato"
 )
 
+const maxTomatoesPerDay = 16
+
 func main() {
 	log.SetFlags(log.Ltime)
 	log.SetOutput(os.Stdout)
@@ -17,5 +19,5 @@ func main() {
 		log.Fatal("This application only supports macos.")
 	}
 
-	tomato.NewController(os.Stdin, &tomato.MacOS{}, 32, time.Minute, time.Sleep).Run()
+	tomato.NewController(os.Stdin, new(tomato.MacOS), maxTomatoesPerDay, time.Minute).Run()
 }
