@@ -8,13 +8,13 @@ import (
 
 type MacOS struct{}
 
-func (this *MacOS) Notify(title, message string) {
-	notification := fmt.Sprintf("display notification \"%s\" with title \"%s\"", message, title)
+func (this *MacOS) Notify(message string) {
+	notification := fmt.Sprintf("display notification \"%s\" with title \"tomato Timer\"", message)
 	this.execute(exec.Command("osascript", "-e", notification))
 }
 
 func (this *MacOS) FocusApp(name string) {
-	this.execute(exec.Command("open", "-a", "Terminal"))
+	this.execute(exec.Command("open", "-a", name))
 }
 
 func (this *MacOS) LockScreen() {

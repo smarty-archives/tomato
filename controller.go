@@ -3,97 +3,87 @@ package tomato
 import (
 	"fmt"
 	"io"
-	"os"
+	"log"
 	"time"
 )
 
-type TimeCounter interface {
-	Countdown(duration time.Duration) chan time.Time
-}
-
-type OS interface {
-	Notify(title, message string)
+type System interface {
+	Notify(message string)
 	FocusApp(name string)
 	LockScreen()
 }
 
+type Sleeper func(time.Duration)
+
 type Controller struct {
-	terminal  io.ReadWriter
-	timer     TimeCounter
-	os        OS
-	interrupt chan os.Signal
-	gameOver  bool
-	duration  time.Duration
+	sleep    Sleeper
+	terminal io.Reader
+	system   System
+
+	maxTomatoCount int
+	tomatoCount    int
+
+	tomato     time.Duration
+	coolDown   time.Duration
+	shortBreak time.Duration
+	longBreak  time.Duration
 }
 
-func NewController(terminal io.ReadWriter, timer TimeCounter, system OS, signals chan os.Signal) *Controller {
+func NewController(terminal io.Reader, system System, sessions int, scale time.Duration, sleeper Sleeper) *Controller {
 	return &Controller{
-		terminal:  terminal,
-		timer:     timer,
-		os:        system,
-		interrupt: signals,
+		terminal:       terminal,
+		system:         system,
+		maxTomatoCount: sessions,
+		sleep:          sleeper,
+
+		tomato:     scale * 24,
+		coolDown:   scale,
+		shortBreak: scale * 5,
+		longBreak:  scale * 15,
 	}
 }
 
 func (this *Controller) Run() {
-	for tomato := 1; !this.gameOver; tomato++ {
+	for this.tomatoCount = 1; this.tomatoCount <= this.maxTomatoCount; this.tomatoCount++ {
 		this.doTomato()
-		this.takeBreak(tomato)
-		this.prepareForNextTomato()
+		this.takeBrake()
+		this.prepareNextTomato()
 	}
 }
 
 func (this *Controller) doTomato() {
-	this.Println("Setting timer for 25 minutes...Go!")
-	this.countdown(time.Minute * 24)
-	this.Println("1 minute remaining...")
-	this.os.Notify("Tomato Timer", "1 minute remaining...")
-	this.countdown(time.Minute)
+	log.Printf("--- Tomato #%d: %v ---", this.tomatoCount, this.tomato+this.coolDown)
+	this.sleep(this.tomato)
+	this.doCoolDown()
+}
+func (this *Controller) doCoolDown() {
+	soon := fmt.Sprintf("%s remaining until %s break...", this.coolDown, this.breakDuration())
+	log.Println(soon)
+	this.system.Notify(soon)
+	this.sleep(this.coolDown)
 }
 
-func (this *Controller) takeBreak(tomatoCount int) {
-	this.os.FocusApp("Terminal")
-	if tomatoCount%4 == 0 {
-		this.takeLongerBreak()
+func (this *Controller) breakDuration() time.Duration {
+	if this.tomatoCount%4 == 0 {
+		return this.longBreak
 	} else {
-		this.takeShorterBreak()
-	}
-}
-func (this *Controller) takeLongerBreak() {
-	this.executeBreak(time.Minute*15, "Time's up! Go take a longer, 15 minute, break. Locking screen...")
-}
-func (this *Controller) takeShorterBreak() {
-	this.executeBreak(time.Minute*5, "Time's up! Go take a 5 minute break. Locking screen...")
-}
-func (this *Controller) executeBreak(duration time.Duration, message string) {
-	this.Println(message)
-	this.countdown(time.Second * 5)
-	this.os.LockScreen()
-	this.countdown(duration)
-}
-func (this *Controller) prepareForNextTomato() {
-	this.Println("<ENTER> to start a new 25 minute tomato...")
-	if !this.gameOver {
-		fmt.Fscanln(this.terminal)
-		fmt.Fprintln(this.terminal)
+		return this.shortBreak
 	}
 }
 
-func (this *Controller) Println(message string) {
-	if this.gameOver {
-		return
-	}
-	fmt.Fprintln(this.terminal, message)
+func (this *Controller) takeBrake() {
+	duration := this.breakDuration()
+	this.system.FocusApp("Terminal")
+	log.Printf("Break: %v", duration)
+	this.system.LockScreen()
+	this.sleep(duration)
 }
 
-func (this *Controller) countdown(duration time.Duration) {
-	if this.gameOver {
-		return
-	}
-	select {
-	case <-this.timer.Countdown(duration):
-		return
-	case <-this.interrupt:
-		this.gameOver = true
-	}
+func (this *Controller) prepareNextTomato() {
+	log.Println("Press <ENTER> to continue...")
+	this.awaitEnterKeyPress()
+}
+
+func (this *Controller) awaitEnterKeyPress() {
+	fmt.Fscanln(this.terminal)
 }
