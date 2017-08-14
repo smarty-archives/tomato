@@ -25,7 +25,8 @@ func (this *MacOS) FocusApp(name string) {
 }
 
 func (this *MacOS) LockScreen() {
-	this.execute(exec.Command("/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession", "-suspend"))
+	const screenSaver = "/System/Library/Frameworks/ScreenSaver.framework/Versions/A/Resources/ScreenSaverEngine.app"
+	this.FocusApp(screenSaver)
 }
 
 func (this *MacOS) execute(command *exec.Cmd) {
